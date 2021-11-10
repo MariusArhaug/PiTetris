@@ -77,7 +77,6 @@ uint16_t *fb_map;
 int fb_fd;
 
 struct input_event event;
-struct pollfd poll_fd[2];
 int js_fd;
 
 gameConfig game = {
