@@ -74,7 +74,6 @@ typedef struct {
 // Struct for screen info, file descriptor and memory mapping
 struct fb_fix_screeninfo fb_info;
 uint16_t *fb_map; 
-uint16_t *fb_map_start;
 int fb_fd;
 
 struct input_event event;
@@ -120,9 +119,6 @@ bool initializeSenseHat() {
     return 0;
   }
 
-  fb_map_start = fb_map;
-
-
   return 1;
 }
 
@@ -143,7 +139,7 @@ void freeSenseHat() {
 // and KEY_ENTER, when the the joystick is pressed
 // !!! when nothing was pressed you MUST return 0 !!!
 uint16_t readSenseHatJoystick() {
-  if (read(js_fd, &event, sizeof(event)) != -1 && event.type == EV_KEY) {
+  if (read(js_fd, &event, sizeof(event)) != -1 && event.type == EV_KEY && event.value == 0) {
     return  (uint16_t) event.code;
   }
   return 0;
@@ -222,7 +218,7 @@ void renderSenseHatMatrix(bool const playfieldChanged) {
   for (uint16_t x = 0; x < game.grid.x; x++) {
     for (uint16_t y = 0; y < game.grid.y; y++) {
       coord const tile = {x, y};
-      *(fb_map_start + coordToSequentialValue(tile)) = tileOccupied(tile) ? getColorFromTile(tile) : BLANK_LED;
+      *(fb_map + coordToSequentialValue(tile)) = tileOccupied(tile) ? getColorFromTile(tile) : BLANK_LED;
     }
   }
 }
