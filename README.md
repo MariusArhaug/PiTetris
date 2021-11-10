@@ -7,3 +7,10 @@ Using the Raspberry Pi Joystick we can pull user input and make the LED matrix u
 
 Each tile gets a sequential color from the colors defined in the top. 
 
+## How to run
+
+In order to run the tetris game use the following `Make` command
+  `make run`
+
+If you get the following error : `File not found` that means that your raspberry pi's dev folders location is relative to somewhere else, make sure that you update the **PATH** macro in the `stetris.c` file
+
