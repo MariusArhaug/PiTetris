@@ -1,5 +1,5 @@
 run:
 	gcc stetris.c -o stetris && ./stetris
 
-test:
+run-test:
 	gcc test.c -o test && ./test

@@ -20,16 +20,16 @@
 #include <sys/select.h>
 #include <sys/types.h>
 
-// The game state can be used to detect what happens on the playfield
 #define GAMEOVER   0
 #define ACTIVE     (1 << 0)
 #define ROW_CLEAR  (1 << 1)
 #define TILE_ADDED (1 << 2)
 
-// If you extend this structure, either avoid pointers or adjust
-// the game logic allocate/deallocate and reset the memory
+// Path to dev folder in Linux machine. If program is crashing it might be due to your path not matching this path. 
+#define DEV_PATH "../../../dev"
 
-#define PATH "../../../dev/fb0"
+#define FB_PATH DEV_PATH "/fb0"
+#define JS_PATH DEV_PATH "/input/event0"
 #define FILESIZE 64 * sizeof(uint16_t)
 
 // colors to be used in sensehat
@@ -70,10 +70,14 @@ typedef struct {
 
 // Framebuffer config hereby aliased to (fb) 
 // Struct for screen info, file descriptor and memory mapping
-struct fb_fix_screeninfo screen_info;
-int fb_fd;
+struct fb_fix_screeninfo fb_info;
 uint16_t *fb_map; 
-uint16_t *fb_map_start_loc;
+uint16_t *fb_map_start;
+int fb_fd;
+
+struct input_event event;
+struct pollfd poll_fd[2];
+int js_fd;
 
 gameConfig game = {
   .grid = {8, 8},
@@ -87,37 +91,44 @@ gameConfig game = {
 // Here you can initialize what ever you need for your task
 // return false if something fails, else true
 bool initializeSenseHat() {
-  // TODO: initialize sensehat
-  //uint16_t *map;
-  //uint16_t *p;
 
-  fb_fd = open(PATH, O_RDWR);
- /* if (framebuffer_number == -1) {
-    printf("Cant open file");
-  }*/
-  /**
-   * Initialize framebuffer map pointer
-   * With flags PROT_READ or PROT_WRITE
-   * 	This allows us to read and write to memory
-   * MAP_SHARED shares mapping to other processes 
-   **/
-  //fb_map = mmap(NULL, FILESIZE, PROT_READ | PROT_WRITE, MAP_SHARED, fb_fd, 0);
-  //fb_map_start_loc = fb_map;
- 
-  /* Clear sensehat LEDs */ 
-  //memset(fb_map, 0, FILESIZE);
-  /*for (int i = 0; i < 64; i++) {
-    *(fb_map_start_loc + i) = RGB_565_RED;
-    usleep(25 * 1000);
-  }*/
+  fb_fd = open(FB_PATH, O_RDWR);
+  js_fd = open(JS_PATH, O_RDONLY | O_NONBLOCK);
 
-  return true;
+  if (fb_fd == -1) {
+    printf("ERROR, failed to open framebuffer \n");
+    return 0;
+  }
+
+  if (js_fd == -1) {
+    printf("ERROR, failed to open input event \n");
+    return 0;
+  }
+
+  if (ioctl(fb_fd, FBIOGET_FSCREENINFO, &fb_info) == -1) {
+    printf("ERROR, failed to call ioctl \n");
+    close(fb_fd);
+    return 0;
+  }
+
+  fb_map = mmap(NULL, FILESIZE, PROT_READ | PROT_WRITE, MAP_SHARED, fb_fd, 0);
+  if (fb_map == MAP_FAILED) {
+    close(fb_fd);
+    printf("ERROR, failed to map file \n");
+    return 0;
+  }
+
+  fb_map_start = fb_map;
+
+
+  return 1;
 }
 
 // This function is called when the application exits
 // Here you can free up everything that you might have opened/allocated
 void freeSenseHat() {
-  // TODO: free memory
+  close(fb_fd);
+  close(js_fd);
 }
 
 // This function should return the key that corresponds to the joystick press
@@ -125,6 +136,11 @@ void freeSenseHat() {
 // and KEY_ENTER, when the the joystick is pressed
 // !!! when nothing was pressed you MUST return 0 !!!
 int readSenseHatJoystick() {
+
+  read(js_fd, &event, sizeof(event));
+  if (event.type == EV_KEY) {
+    return event.code;
+  }
   return 0;
 }
 
@@ -455,8 +471,6 @@ int main(int argc, char **argv) {
   fprintf(stdout, "\033[H\033[J");
   renderConsole(true);
   renderSenseHatMatrix(true);
-
-  fprintf(stdout, fb_fd);
 
   while (true) {
     struct timeval sTv, eTv;

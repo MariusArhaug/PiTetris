@@ -33,8 +33,10 @@ int main(int argc, char **argv) {
   uint16_t *p;
   struct fb_fix_screeninfo fix_info;
 
+  
   /* open the led frame buffer device */
   fbfd = open(PATH, O_RDWR);
+  printf("%d \n", fbfd);
   if (fbfd == -1) {
     perror("Error (call to 'open')");
     exit(EXIT_FAILURE);
@@ -42,10 +44,10 @@ int main(int argc, char **argv) {
 
   /* read fixed screen info for the open device */
   if (ioctl(fbfd, FBIOGET_FSCREENINFO, &fix_info) == -1) {
-     	perror("Error (call to 'ioctl')");
-	close(fbfd);
-	exit(EXIT_FAILURE);
-   }
+    perror("Error (call to 'ioctl')");
+	  close(fbfd);
+	  exit(EXIT_FAILURE);
+  }
 
   /* now check the correct device has been found 
   if (strcmp(fix_info.id, "RPi-Sense FB") != 0) {
@@ -57,9 +59,9 @@ int main(int argc, char **argv) {
   /* map the led frame buffer device into memory */
   map = mmap(NULL, FILESIZE, PROT_READ | PROT_WRITE, MAP_SHARED, fbfd, 0);
   if (map == MAP_FAILED) {
- 	close(fbfd);
-	perror("Error mmapping the file");
-	exit(EXIT_FAILURE);
+    close(fbfd);
+    perror("Error mmapping the file");
+    exit(EXIT_FAILURE);
   }
 
   /* set a pointer to the start of the memory area */
