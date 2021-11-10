@@ -49,13 +49,6 @@ int main(int argc, char **argv) {
 	  exit(EXIT_FAILURE);
   }
 
-  /* now check the correct device has been found 
-  if (strcmp(fix_info.id, "RPi-Sense FB") != 0) {
- 	printf("%s\n", "Error: RPi-Sense FB not found");
-	close(fbfd);
-	exit(EXIT_FAILURE);
-  } */
-
   /* map the led frame buffer device into memory */
   map = mmap(NULL, FILESIZE, PROT_READ | PROT_WRITE, MAP_SHARED, fbfd, 0);
   if (map == MAP_FAILED) {
