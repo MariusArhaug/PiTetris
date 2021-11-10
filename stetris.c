@@ -33,12 +33,14 @@
 #define FILESIZE 64 * sizeof(uint16_t)
 
 // colors to be used in sensehat
-#define RGB_565_RED 0xF800
+#define BLANK_LED 0x000000
 
-
+int colorPicker = 0;
+const int colors[4] = {0xF8000, 0x00FF00, 0x0000FF, 0x006500};
 
 typedef struct {
   bool occupied;
+  int color;
 } tile;
 
 typedef struct {
@@ -124,9 +126,14 @@ bool initializeSenseHat() {
   return 1;
 }
 
+void clearMatrix() {
+  memset(fb_map, 0, FILESIZE);
+}
+
 // This function is called when the application exits
 // Here you can free up everything that you might have opened/allocated
 void freeSenseHat() {
+  clearMatrix();
   close(fb_fd);
   close(js_fd);
 }
@@ -135,30 +142,31 @@ void freeSenseHat() {
 // KEY_UP, KEY_DOWN, KEY_LEFT, KEY_RIGHT, with the respective direction
 // and KEY_ENTER, when the the joystick is pressed
 // !!! when nothing was pressed you MUST return 0 !!!
-int readSenseHatJoystick() {
-
-  read(js_fd, &event, sizeof(event));
-  if (event.type == EV_KEY) {
-    return event.code;
+uint16_t readSenseHatJoystick() {
+  if (read(js_fd, &event, sizeof(event)) != -1 && event.type == EV_KEY) {
+    return  (uint16_t) event.code;
   }
   return 0;
 }
 
-
-// This function should render the gamefield on the LED matrix. It is called
-// every game tick. The parameter playfieldChanged signals whether the game logic
-// has changed the playfield
-void renderSenseHatMatrix(bool const playfieldChanged) {
-  (void) playfieldChanged;
-}
 
 
 // The game logic uses only the following functions to interact with the playfield.
 // if you choose to change the playfield or the tile structure, you might need to
 // adjust this game logic <> playfield interface
 
+static int pickRandomColor() {
+  colorPicker = (colorPicker + 1) % 4;
+  return colors[colorPicker];
+}
+
 static inline void newTile(coord const target) {
   game.playfield[target.y][target.x].occupied = true;
+  game.playfield[target.y][target.x].color = pickRandomColor();
+}
+
+static inline int getColorFromTile(coord const target) {
+  return game.playfield[target.y][target.x].color;
 }
 
 static inline void copyTile(coord const to, coord const from) {
@@ -196,6 +204,26 @@ static inline bool rowOccupied(unsigned int const target) {
 static inline void resetPlayfield() {
   for (unsigned int y = 0; y < game.grid.y; y++) {
     resetRow(y);
+  }
+}
+
+static inline int coordToSequentialValue(coord const target) {
+  return target.x + target.y * 8;
+}
+
+
+// This function should render the gamefield on the LED matrix. It is called
+// every game tick. The parameter playfieldChanged signals whether the game logic
+// has changed the playfield
+void renderSenseHatMatrix(bool const playfieldChanged) {
+  if (!playfieldChanged) {
+    return;
+  }
+  for (uint16_t x = 0; x < game.grid.x; x++) {
+    for (uint16_t y = 0; y < game.grid.y; y++) {
+      coord const tile = {x, y};
+      *(fb_map_start + coordToSequentialValue(tile)) = tileOccupied(tile) ? getColorFromTile(tile) : BLANK_LED;
+    }
   }
 }
 
@@ -389,7 +417,7 @@ void renderConsole(bool const playfieldChanged) {
   // Goto beginning of console
   fprintf(stdout, "\033[%d;%dH", 0, 0);
   for (unsigned int x = 0; x < game.grid.x + 2; x ++) {
-    fprintf(stdout, "-");
+    fprintf(stdout, "%c", (x == 0 || x == game.grid.x + 1) ? '+' : '-');
   }
   fprintf(stdout, "\n");
   for (unsigned int y = 0; y < game.grid.y; y++) {
@@ -419,8 +447,9 @@ void renderConsole(bool const playfieldChanged) {
     }
   }
   for (unsigned int x = 0; x < game.grid.x + 2; x++) {
-    fprintf(stdout, "-");
+    fprintf(stdout, "%c", (x == 0 || x == game.grid.x + 1) ? '+' : '-');
   }
+  printf("\n");
   fflush(stdout);
 }
 
