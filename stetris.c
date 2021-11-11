@@ -70,8 +70,7 @@ typedef struct {
                               // lowers with increasing level, never reaches 0
 } gameConfig;
 
-// Framebuffer config hereby aliased to (fb) 
-// Struct for screen info, file descriptor and memory mapping
+// Framebuffer and Joystick mapping and file descriptors used to update matrix LED aswell as recgonize input events from joystick.
 struct fb_fix_screeninfo fb_info;
 uint16_t *fb_map; 
 int fb_fd;
