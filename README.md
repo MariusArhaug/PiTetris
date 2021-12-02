@@ -7,6 +7,8 @@ Using the Raspberry Pi Joystick we can pull user input and make the LED matrix u
 
 Each tile gets a sequential color from the colors defined in the top. 
 
+> Based on template given by NTNU in the subject `TDT4258 Low Level Programming`
+
 ## How to run
 
 In order to run the tetris game use the following `Make` command
